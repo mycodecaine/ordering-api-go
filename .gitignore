@@ -1,0 +1,37 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+*.a
+*.o
+
+# Go workspace
+bin/
+pkg/
+*.test
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# Vendor directory (if using Go modules, `go mod vendor`)
+vendor/
+
+# Dependency directories
+node_modules/
+coverage.out
+
+# Go build artifacts
+/build/
+.env

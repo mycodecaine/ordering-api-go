@@ -1,0 +1,158 @@
+definitions:
+  application.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  commands.CreateOrderCommand:
+    properties:
+      notes:
+        type: string
+      orderItems:
+        items:
+          $ref: '#/definitions/commands.OrderItemCreateDTO'
+        type: array
+      total:
+        type: number
+    type: object
+  commands.CreateOrderResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  commands.OrderItemCreateDTO:
+    properties:
+      productId:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  commands.OrderItemUpdateDTO:
+    properties:
+      productId:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  commands.UpdateOrderCommand:
+    properties:
+      id:
+        type: string
+      notes:
+        type: string
+      orderItems:
+        items:
+          $ref: '#/definitions/commands.OrderItemUpdateDTO'
+        type: array
+      total:
+        type: number
+    type: object
+  commands.UpdateOrderResponse:
+    type: object
+  queries.GetOrderByIdResponse:
+    properties:
+      id:
+        type: string
+      notes:
+        type: string
+      orderItems:
+        items:
+          $ref: '#/definitions/queries.OrderItemGetDTO'
+        type: array
+      total:
+        type: number
+    type: object
+  queries.OrderItemGetDTO:
+    properties:
+      id:
+        type: string
+      productId:
+        type: string
+      quantity:
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /orders:
+    get:
+      description: Fetch an order's details
+      parameters:
+      - description: Order ID
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/queries.GetOrderByIdResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/application.ErrorResponse'
+      summary: Get order by ID
+      tags:
+      - orders
+    post:
+      consumes:
+      - application/json
+      description: Create an order with items and details
+      parameters:
+      - description: Order JSON
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/commands.CreateOrderCommand'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/commands.CreateOrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/application.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/application.ErrorResponse'
+      summary: Create a new order
+      tags:
+      - orders
+    put:
+      consumes:
+      - application/json
+      description: Update an order with items and details
+      parameters:
+      - description: Order JSON
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/commands.UpdateOrderCommand'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/commands.UpdateOrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/application.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/application.ErrorResponse'
+      summary: Update order
+      tags:
+      - orders
+swagger: "2.0"
