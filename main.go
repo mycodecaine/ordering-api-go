@@ -3,13 +3,16 @@ package main
 import (
 	createorder "ORDERING-API/application/usecases/orders/commands/createorder"
 	updateorder "ORDERING-API/application/usecases/orders/commands/updateorder"
+	ordercreated "ORDERING-API/application/usecases/orders/events/ordercreated"
 	getorderbyid "ORDERING-API/application/usecases/orders/queries/getorderbyid"
+	"ORDERING-API/infrastructure/eventdispatcher"
 	"ORDERING-API/infrastructure/persistence"
 	"ORDERING-API/presentation/controllers"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	// Import the generated Swagger docs
 	_ "ORDERING-API/docs"
@@ -22,6 +25,7 @@ import (
 )
 
 func main() {
+	log.SetOutput(os.Stdout)
 	// Load database connection from environment variables
 	connStr := "host=localhost port=5432 dbname=orderingDB user=doadmin password=ipeadmin123456 sslmode=disable"
 
@@ -40,11 +44,17 @@ func main() {
 
 	log.Println("Successfully connected to the database!")
 
+	// initialize dispatcher
+	dispatcher := eventdispatcher.NewSimpleDispatcher()
+
+	// Register event handlers
+	dispatcher.Register("OrderCreated", ordercreated.OrderCreatedHandler{})
+
 	// Initialize repository
 	orderRepo := persistence.NewOrderRepository(db)
 
 	// Initialize handlers
-	createOrderHandler := createorder.NewCreateOrderHandler(orderRepo)
+	createOrderHandler := createorder.NewCreateOrderHandler(orderRepo, dispatcher)
 	getOrderHandler := getorderbyid.NewGetOrderHandler(orderRepo)
 	updateOrderHandler := updateorder.NewUpdateOrderHandler(orderRepo)
 
