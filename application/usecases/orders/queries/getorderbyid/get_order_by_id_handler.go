@@ -5,10 +5,10 @@ import (
 )
 
 type GetOrderByIdHandler struct {
-	repo repositories.IOrderRepository
+	repo repositories.OrderRepository
 }
 
-func NewGetOrderHandler(repo repositories.IOrderRepository) *GetOrderByIdHandler {
+func NewGetOrderHandler(repo repositories.OrderRepository) *GetOrderByIdHandler {
 	return &GetOrderByIdHandler{repo: repo}
 }
 

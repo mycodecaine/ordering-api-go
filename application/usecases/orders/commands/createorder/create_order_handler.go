@@ -7,11 +7,11 @@ import (
 )
 
 type CreateOrderHandler struct {
-	repo            repositories.IOrderRepository
+	repo            repositories.OrderRepository
 	eventDispatcher events.EventDispatcher
 }
 
-func NewCreateOrderHandler(repo repositories.IOrderRepository, eventDispatcher events.EventDispatcher) *CreateOrderHandler {
+func NewCreateOrderHandler(repo repositories.OrderRepository, eventDispatcher events.EventDispatcher) *CreateOrderHandler {
 	return &CreateOrderHandler{repo: repo, eventDispatcher: eventDispatcher}
 }
 

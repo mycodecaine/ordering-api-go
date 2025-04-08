@@ -6,8 +6,10 @@ import (
 	ordercreated "ORDERING-API/application/usecases/orders/events/ordercreated"
 	getorderbyid "ORDERING-API/application/usecases/orders/queries/getorderbyid"
 	"ORDERING-API/infrastructure/eventdispatcher"
+	"ORDERING-API/infrastructure/mq"
 	"ORDERING-API/infrastructure/persistence"
 	"ORDERING-API/presentation/controllers"
+
 	"database/sql"
 	"fmt"
 	"log"
@@ -47,8 +49,16 @@ func main() {
 	// initialize dispatcher
 	dispatcher := eventdispatcher.NewSimpleDispatcher()
 
+	publisher, err := mq.NewRabbitMQPublisher("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		panic(err)
+	}
+	defer publisher.Close()
+
+	ordercreatedhandler := ordercreated.NewOrderCreatedHandler(publisher)
+
 	// Register event handlers
-	dispatcher.Register("OrderCreated", ordercreated.OrderCreatedHandler{})
+	dispatcher.Register("OrderCreated", ordercreatedhandler)
 
 	// Initialize repository
 	orderRepo := persistence.NewOrderRepository(db)

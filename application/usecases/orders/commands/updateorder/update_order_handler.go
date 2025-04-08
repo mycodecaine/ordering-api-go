@@ -6,10 +6,10 @@ import (
 )
 
 type UpdateOrderHandler struct {
-	repo repositories.IOrderRepository
+	repo repositories.OrderRepository
 }
 
-func NewUpdateOrderHandler(repo repositories.IOrderRepository) *UpdateOrderHandler {
+func NewUpdateOrderHandler(repo repositories.OrderRepository) *UpdateOrderHandler {
 	return &UpdateOrderHandler{repo: repo}
 }
 
