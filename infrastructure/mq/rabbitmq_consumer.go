@@ -1,14 +1,16 @@
 package mq
 
 import (
+	"ORDERING-API/application/abstraction/mq"
 	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQConsumer struct {
-	conn    *amqp.Connection
-	channel *amqp.Channel
+	conn     *amqp.Connection
+	channel  *amqp.Channel
+	handlers []mq.MessageHandler // <- List of handlers
 }
 
 func NewRabbitMQConsumer(amqpURL string) (*RabbitMQConsumer, error) {
@@ -28,7 +30,7 @@ func NewRabbitMQConsumer(amqpURL string) (*RabbitMQConsumer, error) {
 	}, nil
 }
 
-func (c *RabbitMQConsumer) Consume(queueName string, handler func([]byte)) error {
+func (c *RabbitMQConsumer) Consume(queueName string) error {
 	q, err := c.channel.QueueDeclare(
 		queueName,
 		true,  // durable
@@ -56,13 +58,24 @@ func (c *RabbitMQConsumer) Consume(queueName string, handler func([]byte)) error
 
 	go func() {
 		for msg := range msgs {
-			handler(msg.Body)
+			for _, handler := range c.handlers {
+				go func(h mq.MessageHandler, m []byte) {
+					if err := h.Handle(m); err != nil {
+						log.Printf("Handler error: %v", err)
+					}
+				}(handler, msg.Body)
+			}
 		}
 	}()
 
 	log.Printf("Consumer started on queue: %s", queueName)
 	select {} // Block forever
 
+}
+
+// Register handlers
+func (c *RabbitMQConsumer) RegisterHandler(handler mq.MessageHandler) {
+	c.handlers = append(c.handlers, handler)
 }
 
 func (r *RabbitMQConsumer) Close() error {

@@ -71,15 +71,13 @@ func main() {
 	sendemailintegrationeventhandler := integrationeventhandlers.SendEmailOnOrderCreatedConsumerHandler{}
 	sendwhatsappintegrationeventhandler := integrationeventhandlers.SendWhatsappOnOrderCreatedConsumerHandler{}
 
+	consumer.RegisterHandler(sendemailintegrationeventhandler)
+	consumer.RegisterHandler(sendwhatsappintegrationeventhandler)
+
 	// Start consuming
-	// 🔥 Run consumer in a goroutine
+	// Run consumer in a goroutine
 	go func() {
-		err := consumer.Consume("order.created", sendemailintegrationeventhandler.Handle)
-		if err != nil {
-			log.Fatalf("Failed to start consumer: %v", err)
-		}
-		err2 := consumer.Consume("order.created", sendwhatsappintegrationeventhandler.Handle)
-		if err2 != nil {
+		if err := consumer.Consume("order.created"); err != nil {
 			log.Fatalf("Failed to start consumer: %v", err)
 		}
 	}()
