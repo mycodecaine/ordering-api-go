@@ -1,6 +1,9 @@
 package mq
 
 import (
+	"ORDERING-API/application/abstraction/mq"
+	"log"
+
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -9,7 +12,7 @@ type RabbitMQPublisher struct {
 	channel *amqp.Channel
 }
 
-func NewRabbitMQPublisher(amqpURL string) (*RabbitMQPublisher, error) {
+func NewRabbitMQPublisher(amqpURL string) (mq.MessageQueuePublisher, error) {
 	conn, err := amqp.Dial(amqpURL)
 	if err != nil {
 		return nil, err
@@ -35,6 +38,7 @@ func (r *RabbitMQPublisher) Publish(queueName string, message []byte) error {
 		false, // noWait
 		nil,   // args
 	)
+	log.Printf("Publish Message")
 	if err != nil {
 		return err
 	}

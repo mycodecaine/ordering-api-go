@@ -4,6 +4,7 @@ import (
 	createorder "ORDERING-API/application/usecases/orders/commands/createorder"
 	updateorder "ORDERING-API/application/usecases/orders/commands/updateorder"
 	ordercreated "ORDERING-API/application/usecases/orders/events/ordercreated"
+	integrationeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/ordercreated"
 	getorderbyid "ORDERING-API/application/usecases/orders/queries/getorderbyid"
 	"ORDERING-API/infrastructure/eventdispatcher"
 	"ORDERING-API/infrastructure/mq"
@@ -59,6 +60,29 @@ func main() {
 
 	// Register event handlers
 	dispatcher.Register("OrderCreated", ordercreatedhandler)
+
+	// Setup RabbitMQ consumer
+	consumer, err := mq.NewRabbitMQConsumer("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer consumer.Close()
+
+	sendemailintegrationeventhandler := integrationeventhandlers.SendEmailOnOrderCreatedConsumerHandler{}
+	sendwhatsappintegrationeventhandler := integrationeventhandlers.SendWhatsappOnOrderCreatedConsumerHandler{}
+
+	// Start consuming
+	// 🔥 Run consumer in a goroutine
+	go func() {
+		err := consumer.Consume("order.created", sendemailintegrationeventhandler.Handle)
+		if err != nil {
+			log.Fatalf("Failed to start consumer: %v", err)
+		}
+		err2 := consumer.Consume("order.created", sendwhatsappintegrationeventhandler.Handle)
+		if err2 != nil {
+			log.Fatalf("Failed to start consumer: %v", err)
+		}
+	}()
 
 	// Initialize repository
 	orderRepo := persistence.NewOrderRepository(db)
