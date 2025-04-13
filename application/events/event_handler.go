@@ -9,23 +9,24 @@ import (
 	"log"
 )
 
-type OrderCreatedHandler struct {
+type EventHandler struct {
 	Publisher mq.MessageQueuePublisher
 }
 
-func NewOrderCreatedHandler(publisher mq.MessageQueuePublisher) *OrderCreatedHandler {
-	return &OrderCreatedHandler{
+func NewEventHandler(publisher mq.MessageQueuePublisher) *EventHandler {
+	return &EventHandler{
 		Publisher: publisher,
 	}
 }
 
-func (h OrderCreatedHandler) Handle(event events.DomainEvent) {
-	e, ok := event.(events.OrderCreatedEvent)
-	if !ok {
+func (h EventHandler) Handle(e events.DomainEvent) {
+	if e == nil {
+		log.Println("Received nil event")
 		return
 	}
 
-	log.Printf("Handling OrderCreatedEvent: OrderID=%s, Timestamp=%v", e.OrderID, e.Timestamp)
+	eventType := e.EventType()
+	log.Printf("Handling Event:")
 
 	// Marshal the event to JSON
 	message, err := json.Marshal(e)
@@ -35,7 +36,7 @@ func (h OrderCreatedHandler) Handle(event events.DomainEvent) {
 	}
 
 	// Publish to queue
-	err = h.Publisher.Publish("order.created", message)
+	err = h.Publisher.Publish(eventType, message)
 	if err != nil {
 		log.Printf("Failed to publish message: %v", err)
 	}

@@ -29,7 +29,13 @@ func NewOrder(items []OrderItem, notes string, total float64) *Order {
 }
 
 func UpdateOrder(id string, items []OrderItem, notes string, total float64) *Order {
-	return &Order{Id: id, OrderItems: items, Notes: notes, Total: total}
+	order := &Order{Id: id, OrderItems: items, Notes: notes, Total: total}
+
+	order.RecordEvent(events.OrderUpdatedEvent{
+		OrderID:   id,
+		Timestamp: time.Now(),
+	})
+	return order
 }
 
 // Read-only methods

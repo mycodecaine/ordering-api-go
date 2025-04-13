@@ -6,9 +6,9 @@ import (
 	"log"
 )
 
-type SendWhatsappOnOrderCreatedConsumerHandler struct{}
+type SendEmailOnOrderCreatedConsumerHandler struct{}
 
-func (h SendWhatsappOnOrderCreatedConsumerHandler) Handle(msg []byte) error {
+func (h SendEmailOnOrderCreatedConsumerHandler) Handle(msg []byte) error {
 	var event events.OrderCreatedEvent
 	err := json.Unmarshal(msg, &event)
 	if err != nil {
@@ -16,6 +16,6 @@ func (h SendWhatsappOnOrderCreatedConsumerHandler) Handle(msg []byte) error {
 		return err
 	}
 
-	log.Printf("Send Whatsapp Consumed OrderCreatedEvent: OrderID=%s, Timestamp=%v", event.OrderID, event.Timestamp)
+	log.Printf("Send Email Consumed OrderCreatedEvent: OrderID=%s, Timestamp=%v", event.OrderID, event.Timestamp)
 	return nil
 }

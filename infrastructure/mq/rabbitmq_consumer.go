@@ -8,9 +8,9 @@ import (
 )
 
 type RabbitMQConsumer struct {
-	conn     *amqp.Connection
-	channel  *amqp.Channel
-	handlers []mq.MessageHandler // <- List of handlers
+	conn          *amqp.Connection
+	channel       *amqp.Channel
+	queueHandlers map[string][]mq.MessageHandler
 }
 
 func NewRabbitMQConsumer(amqpURL string) (*RabbitMQConsumer, error) {
@@ -25,57 +25,55 @@ func NewRabbitMQConsumer(amqpURL string) (*RabbitMQConsumer, error) {
 	}
 
 	return &RabbitMQConsumer{
-		conn:    conn,
-		channel: ch,
+		conn:          conn,
+		channel:       ch,
+		queueHandlers: make(map[string][]mq.MessageHandler),
 	}, nil
 }
 
-func (c *RabbitMQConsumer) Consume(queueName string) error {
-	q, err := c.channel.QueueDeclare(
-		queueName,
-		true,  // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,
-	)
-	if err != nil {
-		return err
-	}
+func (c *RabbitMQConsumer) Consume() error {
+	for queueName, handlers := range c.queueHandlers {
 
-	msgs, err := c.channel.Consume(
-		q.Name,
-		"",
-		true,  // auto-ack
-		false, // exclusive
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		for msg := range msgs {
-			for _, handler := range c.handlers {
-				go func(h mq.MessageHandler, m []byte) {
-					if err := h.Handle(m); err != nil {
-						log.Printf("Handler error: %v", err)
-					}
-				}(handler, msg.Body)
-			}
+		q, err := c.channel.QueueDeclare(
+			queueName,
+			true,  // durable
+			false, // delete when unused
+			false, // exclusive
+			false, // no-wait
+			nil,
+		)
+		if err != nil {
+			return err
 		}
-	}()
 
-	log.Printf("Consumer started on queue: %s", queueName)
-	select {} // Block forever
+		msgs, err := c.channel.Consume(
+			q.Name, "", true, false, false, false, nil,
+		)
+		if err != nil {
+			return err
+		}
 
+		// Each queue gets its own goroutine
+		go func(queue string, msgs <-chan amqp.Delivery, handlers []mq.MessageHandler) {
+			log.Printf("Consuming from queue: %s", queue)
+			for msg := range msgs {
+				for _, handler := range handlers {
+					go func(h mq.MessageHandler, m []byte) {
+						if err := h.Handle(m); err != nil {
+							log.Printf("Handler error on %s: %v", queue, err)
+						}
+					}(handler, msg.Body)
+				}
+			}
+		}(queueName, msgs, handlers)
+	}
+
+	select {} // block forever
 }
 
 // Register handlers
-func (c *RabbitMQConsumer) RegisterHandler(handler mq.MessageHandler) {
-	c.handlers = append(c.handlers, handler)
+func (c *RabbitMQConsumer) RegisterHandler(queueName string, handler mq.MessageHandler) {
+	c.queueHandlers[queueName] = append(c.queueHandlers[queueName], handler)
 }
 
 func (r *RabbitMQConsumer) Close() error {

@@ -1,10 +1,12 @@
 package main
 
 import (
+	eventhandlers "ORDERING-API/application/events"
 	createorder "ORDERING-API/application/usecases/orders/commands/createorder"
 	updateorder "ORDERING-API/application/usecases/orders/commands/updateorder"
-	ordercreated "ORDERING-API/application/usecases/orders/events/ordercreated"
-	integrationeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/ordercreated"
+
+	integrationordercreatedeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/ordercreated"
+	integrationorderupdatedeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/orderupdated"
 	getorderbyid "ORDERING-API/application/usecases/orders/queries/getorderbyid"
 	"ORDERING-API/infrastructure/eventdispatcher"
 	"ORDERING-API/infrastructure/mq"
@@ -56,10 +58,11 @@ func main() {
 	}
 	defer publisher.Close()
 
-	ordercreatedhandler := ordercreated.NewOrderCreatedHandler(publisher)
+	eventhandler := eventhandlers.NewEventHandler(publisher)
 
 	// Register event handlers
-	dispatcher.Register("OrderCreated", ordercreatedhandler)
+	dispatcher.Register("OrderCreated", eventhandler)
+	dispatcher.Register("OrderUpdated", eventhandler)
 
 	// Setup RabbitMQ consumer
 	consumer, err := mq.NewRabbitMQConsumer("amqp://guest:guest@localhost:5672/")
@@ -68,16 +71,18 @@ func main() {
 	}
 	defer consumer.Close()
 
-	sendemailintegrationeventhandler := integrationeventhandlers.SendEmailOnOrderCreatedConsumerHandler{}
-	sendwhatsappintegrationeventhandler := integrationeventhandlers.SendWhatsappOnOrderCreatedConsumerHandler{}
+	sendemailintegrationeventhandler := integrationordercreatedeventhandlers.SendEmailOnOrderCreatedConsumerHandler{}
+	sendwhatsappintegrationeventhandler := integrationordercreatedeventhandlers.SendWhatsappOnOrderCreatedConsumerHandler{}
+	sendwhatsapponupdatedintegrationeventhandler := integrationorderupdatedeventhandlers.SendWhatsappOnOrderUpdatedConsumerHandler{}
 
-	consumer.RegisterHandler(sendemailintegrationeventhandler)
-	consumer.RegisterHandler(sendwhatsappintegrationeventhandler)
+	consumer.RegisterHandler("OrderCreated", sendemailintegrationeventhandler)
+	consumer.RegisterHandler("OrderCreated", sendwhatsappintegrationeventhandler)
+	consumer.RegisterHandler("OrderUpdated", sendwhatsapponupdatedintegrationeventhandler)
 
 	// Start consuming
 	// Run consumer in a goroutine
 	go func() {
-		if err := consumer.Consume("order.created"); err != nil {
+		if err := consumer.Consume(); err != nil {
 			log.Fatalf("Failed to start consumer: %v", err)
 		}
 	}()
@@ -88,7 +93,7 @@ func main() {
 	// Initialize handlers
 	createOrderHandler := createorder.NewCreateOrderHandler(orderRepo, dispatcher)
 	getOrderHandler := getorderbyid.NewGetOrderHandler(orderRepo)
-	updateOrderHandler := updateorder.NewUpdateOrderHandler(orderRepo)
+	updateOrderHandler := updateorder.NewUpdateOrderHandler(orderRepo, dispatcher)
 
 	// Initialize controller
 	orderController := controllers.NewOrderController(createOrderHandler, getOrderHandler, updateOrderHandler)
