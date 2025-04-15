@@ -1,6 +1,10 @@
 package entities
 
 import (
+	"ORDERING-API/domain/aggregate"
+	"ORDERING-API/domain/events"
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -9,15 +13,29 @@ type Order struct {
 	OrderItems []OrderItem `json:"orderItems"`
 	Notes      string      `json:"notes"`
 	Total      float64     `json:"total"`
+	aggregate.AggregateRoot
 }
 
 func NewOrder(items []OrderItem, notes string, total float64) *Order {
 	id := uuid.New().String()
-	return &Order{Id: id, OrderItems: items, Notes: notes, Total: total}
+	order := &Order{Id: id, OrderItems: items, Notes: notes, Total: total}
+
+	order.RecordEvent(events.OrderCreatedEvent{
+		OrderID:   id,
+		Timestamp: time.Now(),
+	})
+	return order
+
 }
 
 func UpdateOrder(id string, items []OrderItem, notes string, total float64) *Order {
-	return &Order{Id: id, OrderItems: items, Notes: notes, Total: total}
+	order := &Order{Id: id, OrderItems: items, Notes: notes, Total: total}
+
+	order.RecordEvent(events.OrderUpdatedEvent{
+		OrderID:   id,
+		Timestamp: time.Now(),
+	})
+	return order
 }
 
 // Read-only methods

@@ -1,15 +1,23 @@
 package main
 
 import (
+	eventhandlers "ORDERING-API/application/events"
 	createorder "ORDERING-API/application/usecases/orders/commands/createorder"
 	updateorder "ORDERING-API/application/usecases/orders/commands/updateorder"
+
+	integrationordercreatedeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/ordercreated"
+	integrationorderupdatedeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/orderupdated"
 	getorderbyid "ORDERING-API/application/usecases/orders/queries/getorderbyid"
+	"ORDERING-API/infrastructure/eventdispatcher"
+	"ORDERING-API/infrastructure/mq"
 	"ORDERING-API/infrastructure/persistence"
 	"ORDERING-API/presentation/controllers"
+
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	// Import the generated Swagger docs
 	_ "ORDERING-API/docs"
@@ -22,6 +30,7 @@ import (
 )
 
 func main() {
+	log.SetOutput(os.Stdout)
 	// Load database connection from environment variables
 	connStr := "host=localhost port=5432 dbname=orderingDB user=doadmin password=ipeadmin123456 sslmode=disable"
 
@@ -40,13 +49,51 @@ func main() {
 
 	log.Println("Successfully connected to the database!")
 
+	// initialize dispatcher
+	dispatcher := eventdispatcher.NewSimpleDispatcher()
+
+	publisher, err := mq.NewRabbitMQPublisher("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		panic(err)
+	}
+	defer publisher.Close()
+
+	eventhandler := eventhandlers.NewEventHandler(publisher)
+
+	// Register event handlers
+	dispatcher.Register("OrderCreated", eventhandler)
+	dispatcher.Register("OrderUpdated", eventhandler)
+
+	// Setup RabbitMQ consumer
+	consumer, err := mq.NewRabbitMQConsumer("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer consumer.Close()
+
+	sendemailintegrationeventhandler := integrationordercreatedeventhandlers.SendEmailOnOrderCreatedConsumerHandler{}
+	sendwhatsappintegrationeventhandler := integrationordercreatedeventhandlers.SendWhatsappOnOrderCreatedConsumerHandler{}
+	sendwhatsapponupdatedintegrationeventhandler := integrationorderupdatedeventhandlers.SendWhatsappOnOrderUpdatedConsumerHandler{}
+
+	consumer.RegisterHandler("OrderCreated", sendemailintegrationeventhandler)
+	consumer.RegisterHandler("OrderCreated", sendwhatsappintegrationeventhandler)
+	consumer.RegisterHandler("OrderUpdated", sendwhatsapponupdatedintegrationeventhandler)
+
+	// Start consuming
+	// Run consumer in a goroutine
+	go func() {
+		if err := consumer.Consume(); err != nil {
+			log.Fatalf("Failed to start consumer: %v", err)
+		}
+	}()
+
 	// Initialize repository
 	orderRepo := persistence.NewOrderRepository(db)
 
 	// Initialize handlers
-	createOrderHandler := createorder.NewCreateOrderHandler(orderRepo)
+	createOrderHandler := createorder.NewCreateOrderHandler(orderRepo, dispatcher)
 	getOrderHandler := getorderbyid.NewGetOrderHandler(orderRepo)
-	updateOrderHandler := updateorder.NewUpdateOrderHandler(orderRepo)
+	updateOrderHandler := updateorder.NewUpdateOrderHandler(orderRepo, dispatcher)
 
 	// Initialize controller
 	orderController := controllers.NewOrderController(createOrderHandler, getOrderHandler, updateOrderHandler)

@@ -2,7 +2,7 @@ package repositories
 
 import "ORDERING-API/domain/entities"
 
-type IOrderRepository interface {
+type OrderRepository interface {
 	SaveOrder(order *entities.Order) (string, error)
 	GetOrderByID(id string) (*entities.Order, error)
 	DeleteOrder(id string) error

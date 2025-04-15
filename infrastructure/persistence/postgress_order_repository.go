@@ -10,17 +10,17 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
-type OrderRepositoryImpl struct {
+type PostgresOrderRepository struct {
 	db *sql.DB
 }
 
 // NewOrderRepository initializes a new repository
-func NewOrderRepository(db *sql.DB) repositories.IOrderRepository {
-	return &OrderRepositoryImpl{db: db}
+func NewOrderRepository(db *sql.DB) repositories.OrderRepository {
+	return &PostgresOrderRepository{db: db}
 }
 
 // SaveOrder inserts an order into the database
-func (r *OrderRepositoryImpl) SaveOrder(order *entities.Order) (string, error) {
+func (r *PostgresOrderRepository) SaveOrder(order *entities.Order) (string, error) {
 
 	query := `INSERT INTO orders (id, notes, total) VALUES ($1, $2, $3)`
 	_, err := r.db.Exec(query, order.Id, order.Notes, order.Total)
@@ -41,7 +41,7 @@ func (r *OrderRepositoryImpl) SaveOrder(order *entities.Order) (string, error) {
 }
 
 // GetOrderByID retrieves an order from the database
-func (r *OrderRepositoryImpl) GetOrderByID(id string) (*entities.Order, error) {
+func (r *PostgresOrderRepository) GetOrderByID(id string) (*entities.Order, error) {
 	var order entities.Order
 	query := `SELECT id, notes, total FROM orders WHERE id = $1`
 	err := r.db.QueryRow(query, id).Scan(&order.Id, &order.Notes, &order.Total)
@@ -73,7 +73,7 @@ func (r *OrderRepositoryImpl) GetOrderByID(id string) (*entities.Order, error) {
 	return &order, nil
 }
 
-func (r *OrderRepositoryImpl) UpdateOrder(order *entities.Order) error {
+func (r *PostgresOrderRepository) UpdateOrder(order *entities.Order) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (r *OrderRepositoryImpl) UpdateOrder(order *entities.Order) error {
 }
 
 // DeleteOrder removes an order and its items from the database
-func (r *OrderRepositoryImpl) DeleteOrder(id string) error {
+func (r *PostgresOrderRepository) DeleteOrder(id string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func (r *OrderRepositoryImpl) DeleteOrder(id string) error {
 }
 
 // GetOrdersWithPagination retrieves paginated orders
-func (r *OrderRepositoryImpl) GetOrdersWithPagination(limit, offset int) ([]entities.Order, error) {
+func (r *PostgresOrderRepository) GetOrdersWithPagination(limit, offset int) ([]entities.Order, error) {
 	query := `SELECT id, notes, total FROM orders LIMIT $1 OFFSET $2`
 	rows, err := r.db.Query(query, limit, offset)
 	if err != nil {
