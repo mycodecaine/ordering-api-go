@@ -49,6 +49,36 @@ definitions:
     type: object
   commands.UpdateOrderResponse:
     type: object
+  controllers.TokenRequest:
+    properties:
+      client_id:
+        type: string
+      client_secret:
+        description: optional
+        type: string
+      password:
+        type: string
+      realm:
+        type: string
+      username:
+        type: string
+    required:
+    - client_id
+    - password
+    - realm
+    - username
+    type: object
+  controllers.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
   queries.GetOrderByIdResponse:
     properties:
       id:
@@ -74,6 +104,40 @@ definitions:
 info:
   contact: {}
 paths:
+  /auth/token:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user and get a Keycloak access token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: tokenRequest
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.TokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Generate Keycloak token
+      tags:
+      - auth
   /orders:
     get:
       description: Fetch an order's details
@@ -94,6 +158,8 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/application.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get order by ID
       tags:
       - orders
@@ -123,6 +189,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/application.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Create a new order
       tags:
       - orders
@@ -152,7 +220,15 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/application.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Update order
       tags:
       - orders
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and your token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

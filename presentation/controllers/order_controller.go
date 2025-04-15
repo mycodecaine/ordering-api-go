@@ -34,6 +34,7 @@ func NewOrderController(createOrder *createorder.CreateOrderHandler, getOrder *g
 // @Success 201 {object} createorder.CreateOrderResponse
 // @Failure 400 {object} application.ErrorResponse
 // @Failure 500 {object} application.ErrorResponse
+// @Security BearerAuth
 // @Router /orders [post]
 func (oc *OrderController) CreateOrder(c *gin.Context) {
 	var request createorder.CreateOrderCommand
@@ -63,6 +64,7 @@ func (oc *OrderController) CreateOrder(c *gin.Context) {
 // @Success 200 {object} updateorder.UpdateOrderResponse
 // @Failure 400 {object} application.ErrorResponse
 // @Failure 500 {object} application.ErrorResponse
+// @Security BearerAuth
 // @Router /orders [put]
 func (oc *OrderController) UpdateOrder(c *gin.Context) {
 	var request updateorder.UpdateOrderCommand
@@ -90,6 +92,7 @@ func (oc *OrderController) UpdateOrder(c *gin.Context) {
 // @Param id query string true "Order ID"
 // @Success 200 {object} queries.GetOrderByIdResponse
 // @Failure 404 {object} application.ErrorResponse
+// @Security BearerAuth
 // @Router /orders [get]
 func (oc *OrderController) GetOrder(c *gin.Context) {
 	orderID := c.Query("id")
