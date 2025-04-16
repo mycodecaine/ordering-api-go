@@ -47,7 +47,7 @@ func setupLogger() {
 }
 
 func main() {
-	log.SetOutput(os.Stdout)
+
 	setupLogger()
 	// Load database connection from environment variables
 	connStr := "host=localhost port=5432 dbname=orderingDB user=doadmin password=ipeadmin123456 sslmode=disable"
