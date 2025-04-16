@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 type OrderController struct {
@@ -43,6 +44,13 @@ func (oc *OrderController) CreateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, application.ErrorResponse{Error: err.Error()})
 		return
 	}
+
+	// Get claims from context
+	claims := c.MustGet("claims").(map[string]any)
+	username, _ := claims["preferred_username"].(string) // or "email" depending on your token config
+	request.CreatedBy = username
+	log.WithField("user", username).Info("Created an order")
+	log.Printf("User: %s created an order", username)
 	// Process order creation
 	order, err := oc.createOrderHandler.Handle(request)
 	if err != nil {
@@ -73,6 +81,13 @@ func (oc *OrderController) UpdateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, application.ErrorResponse{Error: err.Error()})
 		return
 	}
+
+	// Get claims from context
+	claims := c.MustGet("claims").(map[string]interface{})
+	username, _ := claims["preferred_username"].(string) // or "email" depending on your token config
+
+	request.UpdatedBy = username
+
 	// Process order update
 	order, err := oc.updateOrderHandler.Handle(request)
 	if err != nil {

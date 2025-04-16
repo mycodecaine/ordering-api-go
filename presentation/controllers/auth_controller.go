@@ -61,7 +61,6 @@ func (ac *AuthController) GetToken(c *gin.Context) {
 	data.Set("client_id", req.ClientID)
 	data.Set("username", req.Username)
 	data.Set("password", req.Password)
-	// data.Set("scope", "audience-agogo")
 	if req.ClientSecret != "" {
 		data.Set("client_secret", req.ClientSecret)
 	}

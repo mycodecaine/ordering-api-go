@@ -56,7 +56,7 @@ func (km *KeycloakMiddleware) MiddlewareFunc() gin.HandlerFunc {
 		}
 
 		// You can store claims or roles in context if needed
-		c.Set("user", claims)
+		c.Set("claims", claims)
 		c.Next()
 	}
 }

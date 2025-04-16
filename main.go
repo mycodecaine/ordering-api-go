@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"os"
 
+	logrus "github.com/sirupsen/logrus"
+
 	// Import the generated Swagger docs
 	_ "ORDERING-API/docs"
 
@@ -33,8 +35,20 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
+func setupLogger() {
+	logrus.SetOutput(os.Stdout)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		ForceColors:     true, // helpful for some terminals
+		DisableQuote:    true,
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
+	logrus.SetLevel(logrus.DebugLevel)
+}
+
 func main() {
 	log.SetOutput(os.Stdout)
+	setupLogger()
 	// Load database connection from environment variables
 	connStr := "host=localhost port=5432 dbname=orderingDB user=doadmin password=ipeadmin123456 sslmode=disable"
 
@@ -112,11 +126,6 @@ func main() {
 
 	// Initialize Gin router
 	r := gin.Default()
-
-	// API routes
-	//r.POST("/orders", orderController.CreateOrder)
-	//r.PUT("/orders", orderController.UpdateOrder)
-	//r.GET("/orders", orderController.GetOrder)
 
 	authorized := r.Group("/")
 	authorized.Use(keycloakMiddleware.MiddlewareFunc())
