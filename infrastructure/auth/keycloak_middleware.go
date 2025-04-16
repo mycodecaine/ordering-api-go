@@ -31,6 +31,9 @@ func NewKeycloakMiddleware(issuer string, clientID string) (*KeycloakMiddleware,
 	}, nil
 }
 
+// While integrating with keycloak Im facing with keycloak configration . aud is showing UUID of client-id instead of text value. below is the fix. make sure in keycloak. remove and added again the
+// Client-scope
+// https://chatgpt.com/share/67fe65df-3bdc-8007-96d5-01c5472d0570
 func (km *KeycloakMiddleware) MiddlewareFunc() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -53,7 +56,7 @@ func (km *KeycloakMiddleware) MiddlewareFunc() gin.HandlerFunc {
 		}
 
 		// You can store claims or roles in context if needed
-		c.Set("user", claims)
+		c.Set("claims", claims)
 		c.Next()
 	}
 }

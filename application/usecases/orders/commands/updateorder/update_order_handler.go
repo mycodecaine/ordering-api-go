@@ -17,7 +17,6 @@ func NewUpdateOrderHandler(repo repositories.OrderRepository, eventDispatcher ev
 
 func (h *UpdateOrderHandler) Handle(cmd UpdateOrderCommand) (*UpdateOrderResponse, error) {
 	var orderItems []entities.OrderItem
-
 	for _, p := range cmd.OrderItems {
 		orderItems = append(orderItems, *entities.NewOrderItem(p.ProductID, p.Quantity)) // Directly append the value
 	}

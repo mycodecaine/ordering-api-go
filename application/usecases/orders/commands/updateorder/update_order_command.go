@@ -5,6 +5,7 @@ type UpdateOrderCommand struct {
 	OrderItems []OrderItemUpdateDTO
 	Notes      string
 	Total      float64
+	UpdatedBy  string
 }
 
 type OrderItemUpdateDTO struct {

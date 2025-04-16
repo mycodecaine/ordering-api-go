@@ -1,3 +1,7 @@
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and your token.
 package main
 
 import (
@@ -8,16 +12,18 @@ import (
 	integrationordercreatedeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/ordercreated"
 	integrationorderupdatedeventhandlers "ORDERING-API/application/usecases/orders/integrationevents/orderupdated"
 	getorderbyid "ORDERING-API/application/usecases/orders/queries/getorderbyid"
+	"ORDERING-API/infrastructure/auth"
 	"ORDERING-API/infrastructure/eventdispatcher"
 	"ORDERING-API/infrastructure/mq"
 	"ORDERING-API/infrastructure/persistence"
 	"ORDERING-API/presentation/controllers"
-
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+
+	logrus "github.com/sirupsen/logrus"
 
 	// Import the generated Swagger docs
 	_ "ORDERING-API/docs"
@@ -29,8 +35,20 @@ import (
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
+func setupLogger() {
+	logrus.SetOutput(os.Stdout)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:   true,
+		ForceColors:     true, // helpful for some terminals
+		DisableQuote:    true,
+		TimestampFormat: "2006-01-02 15:04:05",
+	})
+	logrus.SetLevel(logrus.DebugLevel)
+}
+
 func main() {
 	log.SetOutput(os.Stdout)
+	setupLogger()
 	// Load database connection from environment variables
 	connStr := "host=localhost port=5432 dbname=orderingDB user=doadmin password=ipeadmin123456 sslmode=disable"
 
@@ -98,14 +116,25 @@ func main() {
 	// Initialize controller
 	orderController := controllers.NewOrderController(createOrderHandler, getOrderHandler, updateOrderHandler)
 
+	// Keycloak
+	authController := controllers.NewAuthController("http://localhost:7080")
+
+	keycloakMiddleware, err := auth.NewKeycloakMiddleware("http://localhost:7080/realms/agogo", "agogo-client")
+	if err != nil {
+		log.Fatalf("Failed to initialize Keycloak middleware: %v", err)
+	}
+
 	// Initialize Gin router
 	r := gin.Default()
 
-	// API routes
-	r.POST("/orders", orderController.CreateOrder)
-	r.PUT("/orders", orderController.UpdateOrder)
-	r.GET("/orders", orderController.GetOrder)
-
+	authorized := r.Group("/")
+	authorized.Use(keycloakMiddleware.MiddlewareFunc())
+	{
+		authorized.POST("/orders", orderController.CreateOrder)
+		authorized.PUT("/orders", orderController.UpdateOrder)
+		authorized.GET("/orders", orderController.GetOrder)
+	}
+	r.POST("/auth/token", authController.GetToken)
 	// Swagger route
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// Run the server on port 8080
