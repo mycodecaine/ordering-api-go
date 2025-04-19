@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 )
@@ -22,7 +23,13 @@ type Config struct {
 }
 
 func Load() *Config {
-	_ = godotenv.Load() // Load from .env if exists
+	rootPath, _ := filepath.Abs(filepath.Join(".", "..", ".."))
+	envPath := filepath.Join(rootPath, ".env")
+
+	err := godotenv.Load(envPath)
+	if err != nil {
+		log.Println(".env file not found or not loaded")
+	}
 
 	return &Config{
 		Port:           getEnv("PORT", "8080"),

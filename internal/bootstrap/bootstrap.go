@@ -11,8 +11,10 @@ import (
 	"ORDERING-API/infrastructure/eventdispatcher"
 	"ORDERING-API/infrastructure/mq"
 	"ORDERING-API/infrastructure/persistence"
+	"ORDERING-API/internal/config"
 	"ORDERING-API/presentation/controllers"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
@@ -36,9 +38,13 @@ type AppContainer struct {
 
 func InitializeApp() *AppContainer {
 	initLogger()
-
+	cfg := config.Load()
 	// === Database Setup ===
-	db, err := sql.Open("postgres", "host=localhost port=5432 dbname=orderingDB user=doadmin password=ipeadmin123456 sslmode=disable")
+	connStr := fmt.Sprintf(
+		"host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
+		cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBUser, cfg.DBPassword, cfg.DBSSLMode,
+	)
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
@@ -50,12 +56,12 @@ func InitializeApp() *AppContainer {
 	dispatcher := eventdispatcher.NewSimpleDispatcher()
 
 	// === MQ Setup ===
-	publisher, err := mq.NewRabbitMQPublisher("amqp://guest:guest@localhost:5672/")
+	publisher, err := mq.NewRabbitMQPublisher(cfg.RabbitMQURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ publisher: %v", err)
 	}
 
-	consumer, err := mq.NewRabbitMQConsumer("amqp://guest:guest@localhost:5672/")
+	consumer, err := mq.NewRabbitMQConsumer(cfg.RabbitMQURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ consumer: %v", err)
 	}
@@ -77,9 +83,9 @@ func InitializeApp() *AppContainer {
 
 	// === Controllers ===
 	orderController := controllers.NewOrderController(createHandler, getHandler, updateHandler)
-	authController := controllers.NewAuthController("http://localhost:7080")
+	authController := controllers.NewAuthController(cfg.KeycloakURL)
 
-	keycloakMiddleware, err := auth.NewKeycloakMiddleware("http://localhost:7080/realms/agogo", "agogo-client")
+	keycloakMiddleware, err := auth.NewKeycloakMiddleware(cfg.KeycloakURL+"/realms/"+cfg.KeycloakRealm, cfg.KeycloakClient)
 	if err != nil {
 		log.Fatalf("Failed to setup Keycloak middleware: %v", err)
 	}
